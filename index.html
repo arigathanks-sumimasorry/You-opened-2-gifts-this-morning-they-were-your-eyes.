@@ -17,6 +17,13 @@
 
 <img id="photo">
 <button onclick="document.getElementById('upload').click()">Change Photo</button>
+
+<div style="width:300px;margin:10px auto;">
+  <div id="progressContainer" style="width:100%;background:#ddd;height:10px;display:none;">
+    <div id="progressBar" style="width:0%;height:100%;background:#4caf50;"></div>
+  </div>
+</div>
+
 <input type="file" id="upload" accept="image/*">
 
 <script>
@@ -69,14 +76,37 @@
         canvas.toBlob(resolve, "image/jpeg", 0.7)
       );
 
-      await client.storage
-        .from("photos")
-        .upload("current.jpg", blob, {
-          upsert: true,
-          contentType: "image/jpeg"
-        });
+      const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
 
-      loadImage();
+progressContainer.style.display = "block";
+progressBar.style.width = "0%";
+
+const xhr = new XMLHttpRequest();
+const url = `${supabaseUrl}/storage/v1/object/photos/current.jpg`;
+
+xhr.open("POST", url, true);
+xhr.setRequestHeader("apikey", supabaseKey);
+xhr.setRequestHeader("Authorization", `Bearer ${supabaseKey}`);
+xhr.setRequestHeader("x-upsert", "true");
+xhr.setRequestHeader("Content-Type", "image/jpeg");
+
+xhr.upload.addEventListener("progress", function (e) {
+  if (e.lengthComputable) {
+    const percent = (e.loaded / e.total) * 100;
+    progressBar.style.width = percent + "%";
+  }
+});
+
+xhr.onload = function () {
+  progressBar.style.width = "100%";
+  setTimeout(() => {
+    progressContainer.style.display = "none";
+    loadImage();
+  }, 300);
+};
+
+xhr.send(blob);
     };
 
     reader.readAsDataURL(file);
